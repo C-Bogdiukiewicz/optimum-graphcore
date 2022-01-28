@@ -16,4 +16,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from . import bart, bert, roberta, t5, vit
+from . import bart, bert, deberta, roberta, t5, vit
