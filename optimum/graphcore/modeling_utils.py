@@ -194,12 +194,15 @@ def get_layer_ipu(layers_per_ipu):
     return layer_ipu
 
 
-def recomputation_checkpoint(module: nn.Module):
+def recomputation_checkpoint(module: nn.Module) -> torch.utils.hooks.RemovableHandle:
     """Annotates the output of a module to be checkpointed instead of
     recomputed"""
 
     def recompute_outputs(module, inputs, outputs):
-        return tuple(poptorch.recomputationCheckpoint(y) for y in outputs)
+        if type(outputs) is tuple:
+            return tuple(poptorch.recomputationCheckpoint(y) for y in outputs)
+        else:
+            return poptorch.recomputationCheckpoint(outputs)
 
     return module.register_forward_hook(recompute_outputs)
 
