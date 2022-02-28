@@ -25,6 +25,11 @@ from .models.bert import (
     PipelinedBertForSequenceClassification,
     PipelinedBertForTokenClassification,
 )
+from .models.deberta import (
+    PipelinedDebertaForQuestionAnswering,
+    PipelinedDebertaForSequenceClassification,
+    PipelinedDebertaForTokenClassification,
+)
 from .models.roberta import (
     PipelinedRobertaForMultipleChoice,
     PipelinedRobertaForQuestionAnswering,
