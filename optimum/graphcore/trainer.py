@@ -234,7 +234,6 @@ class IPUTrainer:
         if not self.args.fp32:
             self.model = self.model.half()
 
-        self.model_wrapped = self.model
         self.training_model = None
         self.inference_model = None
 
@@ -971,11 +970,8 @@ class IPUTrainer:
         if args.gradient_checkpointing:
             self.model.gradient_checkpointing_enable()
 
-        model = self._wrap_model(self.model_wrapped)
-
-        # for the rest of this function `model` is the outside model, whether it was wrapped or not
-        if model is not self.model:
-            self.model_wrapped = model
+        model = self._wrap_model(self.model)
+        self.model_wrapped = model
 
         # TODO: handle optimizer and scheduler creation
         # if delay_optimizer_creation:
@@ -1210,14 +1206,11 @@ class IPUTrainer:
         if not self.args.fp32:
             self.model.half()
 
-        # TODO: check if this is needed.
-        # if self.training_model and self.training_model.isAttachedToDevice():
-        #     self.training_model.copyWeightsToDevice()
-
-        # if self.inference_model and self.inference_model.isAttachedToDevice():
-        #     self.inference_model.copyWeightsToDevice()
         if len(load_result.missing_keys) != 0:
-            logger.warn(f"There were missing keys in the checkpoint model loaded: {load_result.missing_keys}.")
+            if self.model._keys_to_ignore_on_save is not None and set(load_result.missing_keys) != set(
+                self.model._keys_to_ignore_on_save
+            ):
+                logger.warn(f"There were missing keys in the checkpoint model loaded: {load_result.missing_keys}.")
         if len(load_result.unexpected_keys) != 0:
             logger.warn(f"There were unexpected keys in the checkpoint model loaded: {load_result.unexpected_keys}.")
 
@@ -1597,10 +1590,6 @@ class IPUTrainer:
         output_dir = output_dir if output_dir is not None else self.args.output_dir
         os.makedirs(output_dir, exist_ok=True)
         logger.info(f"Saving model checkpoint to {output_dir}")
-
-        # Updating self.model weights with the weights stored on device.
-        if self.model_wrapped.isAttachedToDevice():
-            self.model_wrapped.copyWeightsToHost()
 
         if not isinstance(self.model, PreTrainedModel):
             logger.info("Trainer.model is not a `PreTrainedModel`, only saving its state dict.")
