@@ -21,6 +21,10 @@
 >         revision=model_args.model_revision,
 >         use_auth_token=True if model_args.use_auth_token else None,
 >     )
+325c326
+<     if config.model_type in {"gpt2", "roberta"}:
+---
+>     if config.model_type in {"gpt2", "roberta", "deberta"}:
 391a393,397
 >     if not data_args.pad_to_max_length:
 >         logging.warning(
