@@ -159,8 +159,71 @@ class PipelinedGPT2LMHeadModel(GPT2LMHeadModel, PipelineMixin):
             # Resize token embeddings back to origianl vocab_size
             self.resize_token_embeddings(self.actual_vocab_size)
 
-    def forward(self, input_ids, attention_mask, labels=None):
-        transformer_outputs = self.transformer(input_ids, attention_mask=attention_mask)
+    # def forward(self, input_ids, attention_mask, labels=None):
+    #     transformer_outputs = self.transformer(input_ids, attention_mask=attention_mask)
+    #     hidden_states = transformer_outputs[0]
+
+    #     lm_logits = self.lm_head(hidden_states)
+    #     if self.ipu_config.embedding_serialization_factor > 1:
+    #         # Ignore the padding logits. Use masking because in-place modification on a slice is not supported yet.
+    #         padding_mask = torch.cat(
+    #             (
+    #                 torch.ones(self.actual_vocab_size),
+    #                 torch.zeros(self.config.vocab_size - self.actual_vocab_size),
+    #             )
+    #         )
+    #         lm_logits = lm_logits * padding_mask + (1 - padding_mask) * -10000.0
+
+    #         # TODO: Use the following line instead to ignore the padding logits
+    #         # lm_logits[:, :, self.actual_vocab_size:] = -10000
+
+    #     loss = None
+    #     if labels is not None:
+    #         # Shift so that tokens < n predict n. Use roll() + ignore_index instead of slicing for better efficiency on IPUs.
+    #         labels = torch.roll(labels, -1, 1)
+    #         # By default the ignore_index of CrossEntropyLoss is -100
+    #         labels[:, -1] = -100
+    #         loss_fct = nn.CrossEntropyLoss()
+    #         loss = loss_fct(lm_logits.view(-1, lm_logits.size(-1)), labels.view(-1))
+
+    #     output = (lm_logits,) + transformer_outputs[1:]
+    #     return (loss,) if loss is not None else output
+
+
+    # This forward is() for generation
+    def forward(
+        self,
+        input_ids=None,
+        past_key_values=None,
+        attention_mask=None,
+        token_type_ids=None,
+        position_ids=None,
+        head_mask=None,
+        inputs_embeds=None,
+        encoder_hidden_states=None,
+        encoder_attention_mask=None,
+        use_cache=None,
+        output_attentions=None,
+        output_hidden_states=None,
+        return_dict=None,
+    ):
+        # assert return_dict != True, "return_dict=True is not supported!"
+
+        transformer_outputs = self.transformer(
+            input_ids,
+            past_key_values=past_key_values,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            encoder_hidden_states=encoder_hidden_states,
+            encoder_attention_mask=encoder_attention_mask,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
         hidden_states = transformer_outputs[0]
 
         lm_logits = self.lm_head(hidden_states)
@@ -177,17 +240,8 @@ class PipelinedGPT2LMHeadModel(GPT2LMHeadModel, PipelineMixin):
             # TODO: Use the following line instead to ignore the padding logits
             # lm_logits[:, :, self.actual_vocab_size:] = -10000
 
-        loss = None
-        if labels is not None:
-            # Shift so that tokens < n predict n. Use roll() + ignore_index instead of slicing for better efficiency on IPUs.
-            labels = torch.roll(labels, -1, 1)
-            # By default the ignore_index of CrossEntropyLoss is -100
-            labels[:, -1] = -100
-            loss_fct = nn.CrossEntropyLoss()
-            loss = loss_fct(lm_logits.view(-1, lm_logits.size(-1)), labels.view(-1))
-
         output = (lm_logits,) + transformer_outputs[1:]
-        return (loss,) if loss is not None else output
+        return output
 
 
 @register(GPT2ForSequenceClassification)
