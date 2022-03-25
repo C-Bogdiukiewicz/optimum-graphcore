@@ -158,7 +158,6 @@ def main():
     ipu_config = ipu_config.for_pod_type(args.pod_type)
     tokenizer = tokenizer_class.from_pretrained(args.model_name_or_path)
     model = model_class.from_pretrained(args.model_name_or_path)
-    model.forward = model._forward_for_generation
     if args.ipu:
         args.device = "ipu"
         model = to_pipelined(model, ipu_config, force=False)
