@@ -162,6 +162,8 @@ def main():
         args.device = "ipu"
         model = to_pipelined(model, ipu_config, force=False)
         model.parallelize()
+        if args.fp16:
+            model.half()
         opts = ipu_config.to_options(for_inference=True)
         # TODO: Should use pipelineing when doing auto-regressive generation
         opts.setExecutionStrategy(poptorch.ShardedExecution())
@@ -170,15 +172,6 @@ def main():
     else:
         args.device = "cpu"
         model.to("cpu")
-
-    if args.fp16:
-        model.half()
-
-    # print ("================================")
-    # print (input_ids.shape)
-    # out = model(input_ids=input_ids)
-    # print (out[0])
-    # print (out[0].shape)
 
     logger.info(ipu_config)
     logger.warning(f"device: {args.device}, 16-bits training: {args.fp16}")
@@ -196,6 +189,8 @@ def main():
         input_ids = None
     else:
         input_ids = encoded_prompt
+
+    # model._user_model.ipu_executor = model
 
     output_sequences = model.generate(
         input_ids=input_ids,
