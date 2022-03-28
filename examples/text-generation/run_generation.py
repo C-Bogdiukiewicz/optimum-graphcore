@@ -169,6 +169,7 @@ def main():
         opts.setExecutionStrategy(poptorch.ShardedExecution())
         model = poptorch.inferenceModel(model, opts)
         model.eval()
+        model._user_model.ipu_executor = model
     else:
         args.device = "cpu"
         model.to("cpu")
@@ -189,8 +190,6 @@ def main():
         input_ids = None
     else:
         input_ids = encoded_prompt
-
-    # model._user_model.ipu_executor = model
 
     output_sequences = model.generate(
         input_ids=input_ids,
