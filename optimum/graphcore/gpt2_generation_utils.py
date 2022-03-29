@@ -57,7 +57,7 @@ from transformers.generation_utils import (
     GreedySearchOutput,
     SampleOutput,
 )
-
+from transformers.modeling_outputs import CausalLMOutputWithCrossAttentions
 from transformers.pytorch_utils import torch_int_div
 from transformers.utils import logging
 
@@ -1111,12 +1111,23 @@ class IPUGenerationMixin(GenerationMixin):
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
 
             # forward pass to get next token
-            outputs = self(
+            outputs = self.ipu_executor(
                 **model_inputs,
-                return_dict=True,
-                output_attentions=output_attentions,
-                output_hidden_states=output_hidden_states,
+                # return_dict=True,
+                # output_attentions=output_attentions,
+                # output_hidden_states=output_hidden_states,
             )
+
+            # Make outputs a dict if it's not a dict already
+            if type(outputs) == tuple or type(outputs) == list:
+                outputs = CausalLMOutputWithCrossAttentions(
+                    loss=None,
+                    logits=outputs[0].float(),
+                    past_key_values=outputs[1],
+                    hidden_states=None,
+                    attentions=None,
+                    cross_attentions=None,
+                )
 
             if synced_gpus and this_peer_finished:
                 cur_len = cur_len + 1
@@ -1128,23 +1139,24 @@ class IPUGenerationMixin(GenerationMixin):
             next_token_scores = logits_processor(input_ids, next_token_logits)
             next_token_scores = logits_warper(input_ids, next_token_scores)
 
-            # Store scores, attentions and hidden_states when required
-            if return_dict_in_generate:
-                if output_scores:
-                    scores += (next_token_scores,)
-                if output_attentions:
-                    decoder_attentions += (
-                        (outputs.decoder_attentions,) if self.config.is_encoder_decoder else (outputs.attentions,)
-                    )
-                    if self.config.is_encoder_decoder:
-                        cross_attentions += (outputs.cross_attentions,)
+            # TODO: enable that?
+            # # Store scores, attentions and hidden_states when required
+            # if return_dict_in_generate:
+            #     if output_scores:
+            #         scores += (next_token_scores,)
+            #     if output_attentions:
+            #         decoder_attentions += (
+            #             (outputs.decoder_attentions,) if self.config.is_encoder_decoder else (outputs.attentions,)
+            #         )
+            #         if self.config.is_encoder_decoder:
+            #             cross_attentions += (outputs.cross_attentions,)
 
-                if output_hidden_states:
-                    decoder_hidden_states += (
-                        (outputs.decoder_hidden_states,)
-                        if self.config.is_encoder_decoder
-                        else (outputs.hidden_states,)
-                    )
+            #     if output_hidden_states:
+            #         decoder_hidden_states += (
+            #             (outputs.decoder_hidden_states,)
+            #             if self.config.is_encoder_decoder
+            #             else (outputs.hidden_states,)
+            #         )
 
             # sample
             probs = nn.functional.softmax(next_token_scores, dim=-1)
