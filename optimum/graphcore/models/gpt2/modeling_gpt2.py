@@ -190,7 +190,6 @@ class PipelinedGPT2LMHeadModel(IPUGenerationMixin, GPT2LMHeadModel, PipelineMixi
     #     output = (lm_logits,) + transformer_outputs[1:]
     #     return (loss,) if loss is not None else output
 
-
     # This forward is() for generation
     def forward(
         self,
