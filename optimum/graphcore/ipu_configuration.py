@@ -63,6 +63,7 @@ class IPUConfig(BaseConfig):
 
         self.recompute_checkpoint_every_layer = kwargs.pop("recompute_checkpoint_every_layer", False)
         self.output_mode = kwargs.pop("output_mode", "final")
+        self.auto_loss_scaling = kwargs.pop("auto_loss_scaling", False)
 
     def _prepare_config_attribute_for_pod_type(
         self, config_attribute_name: str, config_attribute: Union[Any, Dict[str, Any]], pod_type: Optional[str]
@@ -136,7 +137,7 @@ class IPUConfig(BaseConfig):
 
         opts.autoRoundNumIPUs(True)
         opts.deviceIterations(self.inference_device_iterations if for_inference else self.device_iterations)
-
+        opts.Training.setAutomaticLossScaling(True if self.auto_loss_scaling else False)
         if not for_inference:
             # Set gradient accumulation factor
             opts.Training.gradientAccumulation(self.gradient_accumulation_steps)
