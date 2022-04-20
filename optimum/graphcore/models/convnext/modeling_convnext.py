@@ -23,7 +23,7 @@ class ConvNextPipelineMixin(PipelineMixin):
         self.convnext.embeddings = poptorch.BeginBlock(self.convnext.embeddings, "Embedding", ipu_id=0)
 
         # Set encoder pipeline mappings
-        # get the mapping of encoder layers --> IPU 
+        # get the mapping of encoder layers --> IPU
         encoder_layer_ipu = get_layer_ipu(self.ipu_config.layers_per_ipu)
         global_layer_idx = 0
         for stage_nr, stage in enumerate(self.convnext.encoder.stages):
@@ -86,8 +86,9 @@ class PipelinedConvNextForImageClassification(transformers.ConvNextForImageClass
 
         return self
 
+    @poptorch.autocast()
     def forward(self, pixel_values=None, labels=None, output_hidden_states=None, return_dict=False):
-        # return super().forward(pixel_values=pixel_values, labels=labels, output_hidden_states=output_hidden_states, return_dict=False)
+
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         outputs = self.convnext(pixel_values, output_hidden_states=output_hidden_states, return_dict=return_dict)

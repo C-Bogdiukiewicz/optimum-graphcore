@@ -3,9 +3,10 @@
   "recompute_checkpoint_every_layer": true,
   "optimizer_state_offchip": true,
   "replicated_tensor_sharding": true,
-  "enable_half_first_order_momentum": true,
-  "enable_half_partials": true,
 
+  "enable_half_first_order_momentum": false,
+  "enable_half_partials": false,
+  "auto_loss_scaling": true,
 
   "per_device_train_batch_size": 1,
   "per_device_eval_batch_size": 1,
@@ -31,7 +32,7 @@
   "ipus_per_replica": 2,
   "layers_per_ipu": [8,10],
   "matmul_proportion": [0.1],
-  "auto_loss_scaling": true,
+
 
   "dataloader_drop_last": true,
   "dataloader_mode": "async",
