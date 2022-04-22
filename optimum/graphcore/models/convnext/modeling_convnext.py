@@ -1,5 +1,10 @@
 import torch
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
+import torch.nn as nn
+from torch import Tensor
+from transformers.models.convnext.modeling_convnext import ConvNextLayer, ConvNextDropPath, ConvNextLayerNorm
+from transformers.activations import ACT2FN
+import torch.nn.functional as F
 import poptorch
 import transformers
 from transformers.models.convnext import ConvNextModel
@@ -44,6 +49,52 @@ def load_weights_from_fb_model(model, fb_model_path, load_classifier=False):
             new_state_dict[hf_tensor_name] = current_state_dict[hf_tensor_name]
 
     model.load_state_dict(new_state_dict)
+
+class SerializedLinear(nn.Linear):
+    def __init__(self, in_features: int, out_features: int, bias: bool = True,
+                 device=None, dtype=None):
+        super().__init__(in_features, out_features, bias, device, dtype)
+        # import pdb; pdb.set_trace()
+        print(f"LINEAR {in_features} {out_features}")
+        # largest are final blocks:
+        # LINEAR 384 1536
+        # LINEAR 1536 384
+        # BLOCK - 384
+        # LINEAR 384 1536
+        # LINEAR 1536 384
+        # BLOCK - 768
+        # LINEAR 768 3072
+        # LINEAR 3072 768
+        # BLOCK - 768
+        # LINEAR 768 3072
+        # LINEAR 3072 768
+        # BLOCK - 768
+        # LINEAR 768 3072
+        # LINEAR 3072 768
+        if in_features > 1000 or out_features > 1000:
+            self.ser_mode = poptorch.MatMulSerializationMode.ReducingDim
+        else:
+            self.ser_mode = poptorch.MatMulSerializationMode.Disabled
+
+    def forward(self, input: Tensor) -> Tensor:
+        return poptorch.serializedMatMul(input, self.weight.t(), mode=self.ser_mode, factor=2) + self.bias
+
+def replace_block_init(self, config, dim, drop_path=0):
+    super(ConvNextLayer, self).__init__()
+    print(f"BLOCK - {dim}")
+    self.dwconv = nn.Conv2d(dim, dim, kernel_size=7, padding=3, groups=dim)  # depthwise conv
+    self.layernorm = ConvNextLayerNorm(dim, eps=1e-6)
+    self.pwconv1 = SerializedLinear(dim, 4 * dim)  # pointwise/1x1 convs, implemented with linear layers
+    self.act = ACT2FN[config.hidden_act]
+    self.pwconv2 = SerializedLinear(4 * dim, dim)
+    self.layer_scale_parameter = (
+        nn.Parameter(config.layer_scale_init_value * torch.ones((dim)), requires_grad=True)
+        if config.layer_scale_init_value > 0
+        else None
+    )
+    self.drop_path = ConvNextDropPath(drop_path) if drop_path > 0.0 else nn.Identity()
+
+ConvNextLayer.__init__ = replace_block_init
 
 class ConvNextPipelineMixin(PipelineMixin):
     def parallelize(self):
