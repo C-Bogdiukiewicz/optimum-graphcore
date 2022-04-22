@@ -1,25 +1,24 @@
 {
   "embedding_serialization_factor": 1,
   "recompute_checkpoint_every_layer": true,
-  "optimizer_state_offchip": true,
+  "optimizer_state_offchip": false,
   "replicated_tensor_sharding": true,
 
-  "enable_half_first_order_momentum": false,
-  "enable_half_partials": false,
-  "auto_loss_scaling": true,
+  "enable_half_first_order_momentum": true,
+  "enable_half_partials": true,
 
   "per_device_train_batch_size": 1,
   "per_device_eval_batch_size": 1,
 
-  "pod_type": "pod4",
-  "replication_factor": {"pod4": 4, "pod8": 4, "pod16": 8, "pod32": 8, "pod64": 16, "default": 1},
+  "pod_type": "pod8",
+  "replication_factor": {"pod4": 2, "pod8": 4, "pod16": 8, "pod32": 8, "pod64": 16, "default": 1},
   "device_iterations": 1,
   "inference_device_iterations": 2,
   "inference_replication_factor": 4,
   "gradient_accumulation_steps": 128,
   "executable_cache_dir": "./exe_cache",
 
-  "learning_rate": 3e-4,
+  "learning_rate": 5e-5,
   "weight_decay": 1e-8,
   "num_train_epochs": 30,
   "do_train": true,
