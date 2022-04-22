@@ -17,7 +17,7 @@ def extend_hf_convnext_init(self, config):
     # call transformers.ConvNextForImageClassification.__init__()
     transformers.ConvNextForImageClassification.original_init(self, config)
 
-    if hasattr(config, "head_init_scale"):
+    if hasattr(config, "head_init_scale") and config.num_labels>0:
         self.classifier.weight.data.mul_(config.head_init_scale)
         self.classifier.bias.data.mul_(config.head_init_scale)
 
