@@ -71,7 +71,7 @@ class SerializedLinear(nn.Linear):
         # BLOCK - 768
         # LINEAR 768 3072
         # LINEAR 3072 768
-        if in_features > 1000 or out_features > 1000:
+        if in_features > 2000 or out_features > 2000:
             self.ser_mode = poptorch.MatMulSerializationMode.ReducingDim
         else:
             self.ser_mode = poptorch.MatMulSerializationMode.Disabled
